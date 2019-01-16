@@ -243,3 +243,4 @@ Inside the main class add this annotation **@EnableConfigServer** to enable conf
 
 Reference:  
 [Config Server](https://cloud.spring.io/spring-cloud-config/multi/multi__spring_cloud_config_server.html)
+https://github.com/joshlong/cloud-native-workshop
