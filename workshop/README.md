@@ -37,6 +37,12 @@ to clone the application
 git clone https://github.com/kamel2k/handsonlab-microservice.git
 ```
 
+## Applications
+
+config-service : 9999
+order-service : 8080
+discovery-service : 8761
+
 ## Order service
 
 With spring initializr we can bootstrap a spring application very easy.
@@ -150,7 +156,7 @@ and http://localhost:8080/orders/search/by-name?on=kamel to list orders based on
 
 Notice that the API generated consist of an hypermedia API. For more information about HATEOAS visit https://fr.wikipedia.org/wiki/HATEOAS
 
-## Make our application "production ready" with Spring Actuator
+## Add some production functionalities
 
 Spring boot actuator adds several production grade services to your application with little effort on your part. We will add these services in our application.
 
@@ -239,8 +245,77 @@ Go to [Spring Initializr website](https://start.spring.io/) and then generate a 
 Compile project with maven.
 
 Inside the main class add this annotation **@EnableConfigServer** to enable config server
+Make application listen on port 9999
+
+Launch **config-srv** and test http://localhost:9999/order-srv/default  
+**Config-srv** must respond with the given configuration file for **order-srv**
+
+#### Configure order-srv to use config-srv
+
+Every application who need to take the configuration from **config-srv** need to modify application.properties for the microservice with the given lines.  
+for order-srv
+```properties
+spring.cloud.config.name=order-srv
+spring.cloud.config.uri=http://localhost:9999
+```
+
+## Setup Service discovery
+
+**TODO** detailler la problematique et introduire eureka server.
+
+**Step1: bootstrap discovery-svc project**
+Use Spring initializr to bootstrap an eureka service.
+Go to [Spring Initializr website](https://start.spring.io/) and then generate a maven project named **discovery-svc**
+
+> **Spring boot** : 2.1.2  
+> **Group** : com.jcc  
+> **Artifact** : discovery-svc  
+> **Dependencies** : Eureka Server, Config Cliet  
+> **Java version** : 1.8  
+
+Compile project with maven.
+
+**Step2: Configure discovery-svc to use config-svc**  
+Change application.properties with bootstrap.properties and add these lines:
+```
+server.port=9090
+spring.cloud.config.name=discovery-svc
+spring.cloud.config.uri=http://localhost:9999
+```
+
+**Step3: Enable Eureka Server**  
+In the main Java class for discovery-svc add this annotation **@EnableEurekaServer** to enable Eureka Server
+
+**Step4: register order-svc to Eureka Server**
+Add dependency to order-svc
+```xml
+<dependency>
+  <groupId>org.springframework.cloud</groupId>
+  <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+```
 
 
-Reference:  
-[Config Server](https://cloud.spring.io/spring-cloud-config/multi/multi__spring_cloud_config_server.html)
-https://github.com/joshlong/cloud-native-workshop
+**References:**  
+[Config Server](https://cloud.spring.io/spring-cloud-config/multi/multi__spring_cloud_config_server.html)  
+[Autre](https://github.com/joshlong/cloud-native-workshop  )  
+[Service registry-1](https://spring.io/guides/gs/service-registration-and-discovery/)  
+[Service registry-2](https://cloud.spring.io/spring-cloud-static/Edgware.SR2/multi/multi__service_discovery_eureka_clients.html)
+
+
+a lire sur :
+
+* service discovery
+https://www.baeldung.com/spring-cloud-netflix-eureka
+https://github.com/eugenp/tutorials/tree/master/spring-cloud/spring-cloud-eureka
+
+
+* a faire
+- lancer le service order deux fois avec deux ports differents et voir l'interface du registry
+- ajouter swagger pour la documentation de l'api
+- docker-compose
+- changer en yaml c'est plus sexy
+
+
+tres interessant:
+https://piotrminkowski.wordpress.com/2018/04/26/quick-guide-to-microservices-with-spring-boot-2-0-eureka-and-spring-cloud/
