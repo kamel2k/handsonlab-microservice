@@ -6,9 +6,9 @@
 3. [Setup Service Registration and Discovery with Spring Cloud Netflix Eureka](#setup-service-registration-and-discovery-with-spring-cloud-netflix-eureka)
 4. [Use Case Order service](#use-case-order-service)
 5. [Production Ready with Actuator](#production-ready-with-actuator)
-6. [Develop a client order service client](#develop-a-client-order-service-client)
-7. [Resilency with circuit breaker](#resilency-with-circuit-breaker)
-8. [Distributed tracing with zipkin](distributed-tracing-with-zipkin)
+6. [Develop a client order service](#develop-a-client-order-service)
+7. [Resiliency with circuit breaker](#resiliency-with-circuit-breaker)
+8. [Distributed tracing with zipkin](#distributed-tracing-with-zipkin)
 9. [Deployment with Docker](#deployment-with-docker)
 
 
@@ -91,7 +91,7 @@ Go to [Spring Initializr website](https://start.spring.io/) and then generate a 
 Compile project with maven.
 
 Inside the main class add this annotation **@EnableConfigServer** to enable config server
-Make application listen on port 9999 with server.port=8080 into **application.properties**.  
+Make application listen on port 9999 with server.port=${PORT:9999} into **application.properties**.  
 Activate the native profile in the Config Server that does not use Git but loads the config files from the local classpath.
 In production you must externalize configuration with Git and use the parameter **spring.cloud.config.server.git.uri**. For more details go to [Spring website](https://cloud.spring.io/spring-cloud-config/multi/multi__spring_cloud_config_server.html).  
 Here's the content of the **application.properties**
@@ -102,7 +102,13 @@ spring.profiles.active=native
 
 Copy all configuration files for microservices inside /src/main/resources/config
 
-Launch **config-service** and test http://localhost:9999/order-service/default  
+Launch **config-service** with IntelliJ or Maven
+```
+mvn clean package
+java -jar target/config-service-0.0.1-SNAPSHOT.jar
+```
+
+Go to http://localhost:9999/order-service/default  
 **config-service** must respond with the given configuration file for **order-service**
 
 
@@ -361,7 +367,7 @@ Verify that applications are registered with Eureka Service
 
 
 
-### order-client
+### Develop a client order service
 
 
 
@@ -385,14 +391,18 @@ zuul genere tout ce qui est x-forward- for etc.
 
 Mais il faut qulque chose qui fait plus que ça, api gateway, transformation routage, adaptation, etc.
 
-### circuit breaker
+### Resiliency with circuit breaker
 
 ajouter dans le client @EnabledCircuitbreaker
 
-### distributed tracing with zipkin
+### Distributed tracing with zipkin
 
 projet spring boot
 dependences: config client, eureka discovery,
+
+### Deployment with Docker
+
+
 
 **References:**  
 [Config Server](https://cloud.spring.io/spring-cloud-config/multi/multi__spring_cloud_config_server.html)  
