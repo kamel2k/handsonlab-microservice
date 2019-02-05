@@ -55,6 +55,8 @@ config-service : 9999
 order-service : 8080
 discovery-service : 8761
 
+### List all used spring frameworks
+
 ## Build configuration server
 
 Every application has a file for configuration application.properties. witch container server.port, etc. It is an environment concern, it can be different from environment to another. We must ensure that whanever chosen value, we must package the application only once.
@@ -131,7 +133,7 @@ Compile project with maven.
 **Step2: Configure discovery-service to use config-service**  
 Rename **application.properties** with **bootstrap.properties** and add these lines:
 ```
-spring.cloud.config.name=discovery-service
+spring.application.name=discovery-service
 spring.cloud.config.uri=http://localhost:9999
 ```
 
@@ -146,6 +148,8 @@ Go to
 Go to
 > http://localhost:8761/
 
+**Step6: View logs**  
+
 
 ## Use Case Order service
 
@@ -155,7 +159,8 @@ Go to [Spring Initializr website](https://start.spring.io/) and then generate a 
 > **Spring boot** : 2.1.2  
 > **Group** : com.jcc  
 > **Artifact** : order-service  
-> **Dependencies** : jpa, h2, rest repository , actuator, config client, eureka discovery , Cloud Stream, Zipkin Client  
+> **Dependencies** : jpa, h2, rest repository , actuator, config client, eureka discovery , Zipkin Client
+TODO dependency deleted: Cloud Stream  
 > **Java version** : 1.8  
 
 Compile project with maven
@@ -241,7 +246,7 @@ Rename application.properties to bootstrap.properties
 
 Add these lines
 ```
-spring.cloud.config.name=order-service
+spring.application.name=order-service
 spring.cloud.config.uri=http://localhost:9999
 ```
 
@@ -349,6 +354,8 @@ class ServiceInstanceRestController {
 }
 ```
 
+Go to
+http://localhost:8080/service-instances/order-service
 
 ## Running multiple instances
 
