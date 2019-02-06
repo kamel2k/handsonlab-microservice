@@ -366,19 +366,15 @@ java -DPORT=8080 -jar target/order-service-0.0.1-SNAPSHOT.jar
 java -DPORT=7070 -jar target/order-service-0.0.1-SNAPSHOT.jar
 ```
 
-Verify that applications are registered with Eureka Service
+Verify that two instances of order-service are registered with Eureka Service
 > http://localhost:8761/
-
-
-
-
 
 
 ### Develop a client order service
 
 
 
-Config Client, Eureka discovery, Stream Rabbit, Zipkin client, Hystrix, zuul, Rest Repository, Web, Actuator, Cloud OAuth2, Feign
+Config Client, Eureka discovery, Zipkin client, Hystrix, zuul, Rest Repository, Web, Actuator, Feign
 
 dans bootstrap.properties
 spring.application.name=order-client
@@ -398,9 +394,74 @@ zuul genere tout ce qui est x-forward- for etc.
 
 Mais il faut qulque chose qui fait plus que ça, api gateway, transformation routage, adaptation, etc.
 
+par exemple si on veux seulement récuperer la lister des nom des orders donc il sagit dune transformation, il nous faut une api gateway
+
+le bean rest template n'a aucune idéee sur ribbon ou sur les instances qui sont enregistré par eureka, il faut un intercepteur exemple @LoadBalanced c'est vraiment une annotation spring cloud
+
+this.restTemplate.exchange("http://order-service/orders", HttpMethod.GET, null, )
+
+null c'est qu'il nya pas de body
+le dernier parametre c'est le type de retour.
+
+code final :
+
+a integrer dans la classe principale
+@Bean
+@LoadBalanced
+RestTemplate restTemplate() {
+  return new RestTemplate();
+}
+
+a integrer dans le fichier
+
+@RestController
+@RequestMapping("/orders")
+class OrderApiGateway {
+
+	private RestTemplate restTemplate;
+
+	@Autowired
+	public OrderApiGateway(RestTemplate restTemplate) {
+		this.restTemplate = restTemplate;
+	}
+
+	@RequestMapping (method = RequestMethod.GET, value = "/names")
+	public Collection<String> names() {
+
+		ParameterizedTypeReference<Resources<Order>> ptr = new ParameterizedTypeReference<Resources<Order>>() {};
+
+		ResponseEntity<Resources<Order>> responseEntity = this.restTemplate.exchange("http://order-service/orders", HttpMethod.GET, null, ptr);
+
+		return responseEntity
+				.getBody()
+				.getContent()
+				.stream()
+				.map(Order::getOrderName)
+				.collect(Collectors.toList());
+	}
+}
+
+
+class Order {
+	private String orderName;
+
+	public String getOrderName() {
+		return orderName;
+	}
+}
+
+
 ### Resiliency with circuit breaker
 
-ajouter dans le client @EnabledCircuitbreaker
+ajouter dans le client @EnableCircuitBreaker
+
+annoter la methode qui fait un appel distant par : @HystrixCommand(fallbackMethod = "fallback")
+
+et implementer la methode fallbackMethod
+public Collection <String> fallback() {
+		return new ArrayList<>();
+	}
+
 
 ### Distributed tracing with zipkin
 
