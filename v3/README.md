@@ -372,48 +372,53 @@ Verify that two instances of order-service are registered with Eureka Service
 
 ### Develop a client order service
 
+Use spring initializr to bootstrap an order client.
+Go to [Spring Initializr website](https://start.spring.io/) and then generate a maven project named **order-client**
 
+> **Spring boot** : 2.1.2  
+> **Group** : com.jcc  
+> **Artifact** : order-client   
+> **Dependencies** : Config Client, Eureka discovery, Zipkin client, Hystrix, zuul, Rest Repository, Web, Actuator, Feign  
+> **Java version** : 1.8  
 
-Config Client, Eureka discovery, Zipkin client, Hystrix, zuul, Rest Repository, Web, Actuator, Feign
+Compile project with maven.
 
-dans bootstrap.properties
+### Configure order-client to use the config server
+
+Rename application.properties to bootstrap.properties
+
+And add these lines
+```
 spring.application.name=order-client
 spring.cloud.config.uri=http://localhost:9999
+```
 
-Ajouter dans la classe principale
-@EnableDiscoveryClient
+### Enable service discovery
 
-### micro Proxy
-Ajouter le microproxy zuul
-@EnableZuulProxy
+To begin using the DiscoveryClient, you first need to annotate the main class with @EnableDiscoveryClient annotation.
+This annotation will activate the Spring DiscoveryClient for use.
+In the real life you must use DiscoveryClient with RestTemplate to query Ribbon (see later)
 
-lancer le service et allez sur http://localhost:7777/order-service/orders
-et le service original http://localhost:8080/orders
-zuul c'est un microproxy dont il redirige toutes les requetes vers le downstream service. Il cnstitue un seul point d'entree pour l'application. ça evide les problemes de cors et il permet aussi de faire queles operations sur les requetes par exemple rate limiter.
-zuul genere tout ce qui est x-forward- for etc.
+### Zuul micro Proxy usage
 
-Mais il faut qulque chose qui fait plus que ça, api gateway, transformation routage, adaptation, etc.
+Zuul is a micro proxy that redirect all requests to downstream service. It is an edge service. It represent a unique entry point of the application. it avoids the problems of CORS, and you can make some operations on the urls like rate limiter, etc.
 
-par exemple si on veux seulement récuperer la lister des nom des orders donc il sagit dune transformation, il nous faut une api gateway
+Begin by annotate main order client class with @EnableZuulProxy
 
-le bean rest template n'a aucune idéee sur ribbon ou sur les instances qui sont enregistré par eureka, il faut un intercepteur exemple @LoadBalanced c'est vraiment une annotation spring cloud
+Launch the application and go to main url of the edge service :
 
-this.restTemplate.exchange("http://order-service/orders", HttpMethod.GET, null, )
+> http://localhost:7777/order-service/orders
 
-null c'est qu'il nya pas de body
-le dernier parametre c'est le type de retour.
+Then go to the downstream service :
+> http://localhost:8080/orders
 
-code final :
 
-a integrer dans la classe principale
-@Bean
-@LoadBalanced
-RestTemplate restTemplate() {
-  return new RestTemplate();
-}
+### Introduce api gateway
+We need something that does more than redirecting urls. We need an api gateway to make url transformation, adapter, etc.
+For example if we want to list only the names of the order without id, etc. we need a transformation.
 
-a integrer dans le fichier
-
+Here the snippet of code to do that
+```java
 @RestController
 @RequestMapping("/orders")
 class OrderApiGateway {
@@ -432,6 +437,8 @@ class OrderApiGateway {
 
 		ResponseEntity<Resources<Order>> responseEntity = this.restTemplate.exchange("http://order-service/orders", HttpMethod.GET, null, ptr);
 
+    // null because there is no body
+
 		return responseEntity
 				.getBody()
 				.getContent()
@@ -440,8 +447,10 @@ class OrderApiGateway {
 				.collect(Collectors.toList());
 	}
 }
+```
 
-
+Don't forget to create the entity Order
+```java
 class Order {
 	private String orderName;
 
@@ -449,18 +458,39 @@ class Order {
 		return orderName;
 	}
 }
+```
+Finally introduce a bean to instanciate RestTemplate
+```java
+@Bean
+@LoadBalanced
+RestTemplate restTemplate() {
+  return new RestTemplate();
+}
+```
+
+RestTemplate has no idea about ribbon or instances that are registered by Eureka. We need an interceptor like @LoadBalanced, which is a spring cloud annotation.
+The @LoadBalanced annotation tells Spring Cloud to create a Ribbon backed RestTemplate class.
+
+**Launch the application**  
+Go to http://localhost:7777/orders
+
 
 
 ### Resiliency with circuit breaker
 
-ajouter dans le client @EnableCircuitBreaker
-
-annoter la methode qui fait un appel distant par : @HystrixCommand(fallbackMethod = "fallback")
-
-et implementer la methode fallbackMethod
+Application can fail at any moment, to have an application that respond in all situations, even in the case of a degraded response we can use a Circuit Breaker.  
+In the client order enable Circuit Breaker with this annotation @EnableCircuitBreaker.  
+And then to tell Hystrix to protect the remote call to another service, use @HystrixCommand annotation.
+Annotate names() method with  @HystrixCommand(fallbackMethod = "fallback")  
+The fallback is the name of the method to deal with call failure. It is implemented like this
+```java
 public Collection <String> fallback() {
 		return new ArrayList<>();
-	}
+}
+```
+
+Test the application and stop the Order service to view the result.
+
 
 
 ### Distributed tracing with zipkin
